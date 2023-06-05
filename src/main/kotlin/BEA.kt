@@ -7,77 +7,58 @@ class BEA(
     private val machineList: Array<String>,
     private val scriptList: Array<Script>
 ) {
-
     private fun initializePopulation() = MutableList(numOfBac) {
         Array(scriptList.size) {
             Random.nextInt(machineList.size)
         }
     }
-
-    private fun bestFit(population: List<Array<Int>>) : Int {
-        //println("Best fit function:")
-        val sumList = List(population.size){ Array(machineList.size) { 0 } }
+    private fun getDurationsOfBacterium(bacterium: Array<Int>) : Array<Int> {
+        val sumList = Array(machineList.size) { 0 }
+        for (i in bacterium.indices) {
+            sumList[bacterium[i]] += scriptList[i].duration
+        }
+        return sumList
+    }
+    private fun getIndexOfBestBacterium(population: List<Array<Int>>) : Int {
+        val sumList = MutableList(population.size) { 0 }
         for (i in population.indices) {
-            for (j in scriptList.indices) {
-                sumList[i][population[i][j]] += scriptList[j].duration
-            }
-            //println(sumList[i].toList())
+            sumList[i] += getDurationsOfBacterium(population[i]).max()
         }
-
-        //println(sumList.minOf { it.max() })
-
-        return sumList.indexOfFirst { i ->
-            i.max() == sumList.minOf { it.max() }
+        return sumList.indexOfFirst {
+            it == sumList.min()
         }
     }
-
-    private fun getSum(bacteria: Array<Int>) : Int {
-        val sumList = Array(machineList.size) { 0 }
-        for (i in bacteria.indices) {
-            sumList[bacteria[i]] += scriptList[i].duration
-        }
-        return sumList.max()
+    private fun desc(bacterium: Array<Int>) {
+        val durations = getDurationsOfBacterium(bacterium)
+        println("Bacterium: " + bacterium.toList() + " Durations: " + durations.toList() + " Best: " + durations.max())
     }
-
-    private fun desc(bacteria: Array<Int>) {
-        val sumList = Array(machineList.size) { 0 }
-        for (i in bacteria.indices) {
-            sumList[bacteria[i]] += scriptList[i].duration
-        }
-        println("Bacteria: " + bacteria.toList() + " Durations: " + sumList.toList() + " Best: " + sumList.max())
-    }
-
-    private fun bacterialMutation(bacteria: Array<Int>): Array<Int> {
-        val cloneList = MutableList((machineList.size)) { bacteria.copyOf() }
-        val randomListForBacteria = MutableList(bacteria.size) { i -> i }
-
+    private fun bacterialMutation(bacterium: Array<Int>): Array<Int> {
+        // First step: create clones from the bacterium n times, where n is the number of machines
+        val cloneList = MutableList((machineList.size)) { bacterium.copyOf() }
+        val randomListForBacteria = MutableList(bacterium.size) { i -> i }
+        
         while(randomListForBacteria.isNotEmpty()) {
             val randomBacteria = (0 until randomListForBacteria.size).random()
             val randomListForMutationValue = MutableList(machineList.size) { i -> i }
-
             for (i in cloneList.indices) {
                 val randomMutationValue = (0 until randomListForMutationValue.size).random()
                 cloneList[i][randomBacteria] = randomListForMutationValue[randomMutationValue]
-                //print("Kivettem ${randomListForMutationValue[randomMutationValue]} -t a mutációs listából, ")
                 randomListForMutationValue.removeAt(randomMutationValue)
-                //print("maradt:  $randomListForMutationValue\n")
             }
 
-            val indexOfBestClone = bestFit(cloneList)
+            val indexOfBestClone = getIndexOfBestBacterium(cloneList)
 
             for (i in cloneList.indices) {
                 cloneList[i][randomBacteria] = cloneList[indexOfBestClone][randomBacteria]
             }
             randomListForBacteria.removeAt(randomBacteria)
-            //println("Kivettem $randomBacteria -t a baktérium listából, maradt:  $randomListForBacteria")
         }
-        return cloneList[bestFit(cloneList)]
+        return cloneList[getIndexOfBestBacterium(cloneList)]
     }
 
     private fun geneTransfer(population: MutableList<Array<Int>>) {
-        //1. Populáció felosztása jó és rossz egyedekre
-        val goodBacterias = mutableListOf<Array<Int>>()
-        val badBacterias = mutableListOf<Array<Int>>()
+        val goodBacteria = mutableListOf<Array<Int>>()
+        val badBacteria = mutableListOf<Array<Int>>()
 
         val sumList = List(population.size) { Array(machineList.size) { 0 } }
 
@@ -91,71 +72,60 @@ class BEA(
 
         for (i in population.indices) {
             if (sumList[i].max() < averageDuration) {
-                goodBacterias.add(population[i])
+                goodBacteria.add(population[i])
             } else {
-                badBacterias.add(population[i])
+                badBacteria.add(population[i])
             }
         }
 
-        if (goodBacterias.isEmpty()) {
-            val transferSize = badBacterias.size / 2
-            val transferredElements = badBacterias.take(transferSize)
-            goodBacterias.addAll(transferredElements)
-            badBacterias.removeAll(transferredElements)
-        } else if (badBacterias.isEmpty()) {
-            val transferSize = goodBacterias.size / 2
-            val transferredElements = goodBacterias.take(transferSize)
-            badBacterias.addAll(transferredElements)
-            goodBacterias.removeAll(transferredElements)
+        if (goodBacteria.isEmpty()) {
+            val transferSize = badBacteria.size / 2
+            val transferredElements = badBacteria.take(transferSize)
+            goodBacteria.addAll(transferredElements)
+            badBacteria.removeAll(transferredElements)
+        } else if (badBacteria.isEmpty()) {
+            val transferSize = goodBacteria.size / 2
+            val transferredElements = goodBacteria.take(transferSize)
+            badBacteria.addAll(transferredElements)
+            goodBacteria.removeAll(transferredElements)
         }
 
         var inf = 0
 
-        while (inf < numOfInf && badBacterias.isNotEmpty()) {
-
-            //2. Véletlenszerűen kiválasztani egyet a jó és rossz baktériumok közül
-            val randomGoodBacteria = (0 until goodBacterias.size).random()
-            val randomBadBacteria = (0 until badBacterias.size).random()
-
-            //3. Véletlenszerűen kiválasztani egy részt a baktériumokból, és átadni a jót a rossznak
+        while (inf < numOfInf && badBacteria.isNotEmpty()) {
+            
+            val randomGoodBacteria = (0 until goodBacteria.size).random()
+            val randomBadBacteria = (0 until badBacteria.size).random()
+            
             val fromIndex = (0 until (scriptList.size - 1)).random()
             val toIndex = (fromIndex until scriptList.size).random()
 
-            println("Random good bacteria before gene transfer: ")
-            desc(goodBacterias[randomGoodBacteria])
-            println("Random bad bacteria before gene transfer: ")
-            desc(badBacterias[randomBadBacteria])
+            println("Random good bacterium before gene transfer: ")
+            desc(goodBacteria[randomGoodBacteria])
+            println("Random bad bacterium before gene transfer: ")
+            desc(badBacteria[randomBadBacteria])
             println("From index: $fromIndex, To index: $toIndex")
 
-            val badBacteriaClone = badBacterias[randomBadBacteria].copyOf()
+            val badBacteriaClone = badBacteria[randomBadBacteria].copyOf()
 
             for (i in fromIndex..toIndex) {
-                badBacteriaClone[i] = goodBacterias[randomGoodBacteria][i]
+                badBacteriaClone[i] = goodBacteria[randomGoodBacteria][i]
             }
-            println("Bad bacteria clone after gene transfer: ")
+            println("Bad bacterium clone after gene transfer: ")
             desc(badBacteriaClone)
 
-            println("Random bad bacteria after gene transfer: ")
-            if (getSum(badBacteriaClone) < averageDuration) {
-                badBacterias.removeAt(randomBadBacteria)
-                goodBacterias.add(badBacteriaClone)
+            println("Random bad bacterium after gene transfer: ")
+            val bestDurationOfBadBacteriaClone = getDurationsOfBacterium(badBacteriaClone).max()
+
+            if (bestDurationOfBadBacteriaClone < averageDuration) {
+                badBacteria.removeAt(randomBadBacteria)
+                goodBacteria.add(badBacteriaClone)
                 desc(badBacteriaClone)
-            } else if (getSum(badBacteriaClone) < getSum(badBacterias[randomBadBacteria])) {
-                badBacterias[randomBadBacteria] = badBacteriaClone
-                desc(badBacterias[randomBadBacteria])
+            } else if (bestDurationOfBadBacteriaClone <  getDurationsOfBacterium(badBacteria[randomBadBacteria]).max()) {
+                badBacteria[randomBadBacteria] = badBacteriaClone
+                desc(badBacteria[randomBadBacteria])
             } else {
-                desc(badBacterias[randomBadBacteria])
-            }
-
-
-
-            println("Good bacteria: ")
-            goodBacterias.forEach {
-                desc(it)
-            }
-            println("Bad bacteria: ")
-            badBacterias.forEach {
-                desc(it)
+                desc(badBacteria[randomBadBacteria])
             }
 
             println("Original population: ")
@@ -163,8 +133,9 @@ class BEA(
                 desc(it)
             }
             println("After gene transfer: ")
+            
             population.clear()
-            population.addAll(goodBacterias.plus(badBacterias))
+            population.addAll(goodBacteria.plus(badBacteria))
             population.forEach {
                 desc(it)
             }
@@ -172,17 +143,13 @@ class BEA(
             inf++
         }
     }
-
     fun run() {
-        val pop = initializePopulation()
-        for (generation in 0 until numOfGen) {
-            for (i in pop.indices) {
+        val pop = initializePopulation()                // First step: initialize population with random Bacteria
+        for (generation in 0 until numOfGen) {    // Second step: run generations
+            for (i in pop.indices) {                    // Third step: Bacterial mutation for each bacterium in the population
                 pop[i] = bacterialMutation(pop[i])
             }
-            /*pop.forEach {
-                desc(it)
-            }*/
-            geneTransfer(pop)
+            geneTransfer(pop)                           // Fourth step: Gene transfer on the population
         }
     }
 }

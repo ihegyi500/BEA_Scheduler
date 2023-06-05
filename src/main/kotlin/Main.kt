@@ -14,12 +14,13 @@ data class Script(
     val endTime: Int
 )
 
-data class Setup(
+data class Setup (
     val machineList: Array<String>,
     val scriptList: Array<Script>,
     val scriptToMachine: Array<Int>
 )
 
+/*
 fun showResult_orig(setup: Setup) {
     val sumList = MutableList<Int>(setup.machineList.size) {0}
     setup.machineList.forEach {print("\t\t\t$it")}
@@ -40,23 +41,12 @@ fun showResult_orig(setup: Setup) {
     }
     println("\nTotal: ${sumList.max()}")
 }
-
-fun calcRes(setupList: List<Setup>) {
-    var sumList = MutableList(setupList[0].machineList.size) {0}
-    setupList.forEach { setup ->
-        for (i in setup.scriptList.indices) {
-            sumList[setup.scriptToMachine[i]] += setup.scriptList[i].duration
-        }
-    }
-
-    println("Longest Machine run: ${sumList.max()}")
-}
-
+*/
 fun main() = runBlocking {
     val time = measureTimeMillis {
 
         val numOfMachines = 3
-        val numOfScripts = 40
+        val numOfScripts = 10
 
         val machineList: Array<String> = Array(numOfMachines) { "Machine_${it + 1}" }
         val scriptList: Array<Script> = Array(numOfScripts) {
@@ -88,7 +78,7 @@ fun main() = runBlocking {
     }*/
 
         val bea = BEA(
-            10,
+            5,
             2,
             5,
             machineList,
@@ -98,5 +88,5 @@ fun main() = runBlocking {
         bea.run()
     }
 
-    println("\nTime: ${time} ms")
+    println("\nTime: $time ms")
 }
